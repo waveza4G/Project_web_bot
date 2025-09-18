@@ -1,103 +1,171 @@
-import Image from "next/image";
+"use client";
+import { useState, useEffect, useRef } from "react";
+import { useHistoryContext } from "./HistoryContext";
+import ReactMarkdown from "react-markdown"; // ✅ เพิ่ม
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const { currentFile } = useHistoryContext();
+  const [messages, setMessages] = useState<{ sender: string; text: string }[]>([]);
+  const [input, setInput] = useState("");
+  const [loadedFile, setLoadedFile] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const chatContainerRef = useRef<HTMLDivElement | null>(null);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+
+  const isNearBottom = () => {
+    const el = chatContainerRef.current;
+    if (!el) return false;
+    const threshold = 50;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  };
+
+  useEffect(() => {
+    const el = chatContainerRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      if (isNearBottom()) {
+        setShowScrollButton(false);
+      } else {
+        setShowScrollButton(true);
+      }
+    };
+
+    el.addEventListener("scroll", handleScroll);
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // โหลดข้อความเก่า
+  useEffect(() => {
+    if (!currentFile || currentFile === loadedFile) return;
+
+    setLoading(true);
+    fetch(`/api/history?file=${currentFile}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.history)) {
+          const formatted = data.history.map((h: any) => ({
+            sender: h.role === "user" ? "user" : "bot",
+            text: h.parts?.[0]?.text || "",
+          }));
+          setMessages(formatted);
+        } else {
+          setMessages([]);
+        }
+        setLoadedFile(currentFile);
+      })
+      .catch((err) => {
+        console.error("❌ Failed to load history:", err);
+        setMessages([]);
+      })
+      .finally(() => setLoading(false));
+  }, [currentFile, loadedFile]);
+
+  const sendMessage = async () => {
+    if (!input || !currentFile) return;
+
+    console.log("📩 Client send USER:", input);
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file: currentFile, message: input }),
+      });
+
+      const data = await res.json();
+
+      if (Array.isArray(data.history)) {
+        const formatted = data.history.map((h: any) => ({
+          sender: h.role === "user" ? "user" : "bot",
+          text: h.parts?.[0]?.text || "",
+        }));
+        setMessages(formatted);
+      }
+    } catch (err) {
+      console.error("❌ Failed to send message:", err);
+    } finally {
+      setLoading(false);
+    }
+
+    setInput("");
+  };
+
+  return (
+    <main>
+      {currentFile ? (
+        <>
+          <h3 style={{ padding: "0.5rem 1rem" }}>💬 กำลังคุยใน: {currentFile}</h3>
+
+          {loading && (
+            <p style={{ padding: "0.5rem 1rem", color: "orange" }}>
+              ⏳ กำลังรอทำงาน...
+            </p>
+          )}
+
+        <div className="chat-container" ref={chatContainerRef}>
+          {messages.map((msg, i) => (
+            <div key={i} className={`message ${msg.sender}`}>
+              <ReactMarkdown>
+                {msg.text}
+              </ReactMarkdown>
+            </div>
+          ))}
+          <div ref={chatEndRef} />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+
+
+          {showScrollButton && (
+            <button
+              onClick={() => {
+                const el = chatContainerRef.current;
+                if (el) {
+                  el.scrollTo({
+                    top: el.scrollHeight,
+                    behavior: "smooth",
+                  });
+                }
+              }}
+              style={{
+                position: "absolute",
+                bottom: "80px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                padding: "0.5rem 1rem",
+                borderRadius: "20px",
+                background: "#38bdf8",
+                color: "white",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              ⬇
+            </button>
+          )}
+
+          <div className="input-box">
+            <input
+              type="text"
+              placeholder="พิมพ์ข้อความ..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              disabled={loading}
+            />
+            <button onClick={sendMessage} disabled={loading}>
+              {loading ? "..." : "ส่ง"}
+            </button>
+          </div>
+        </>
+      ) : (
+        <p style={{ padding: "1rem" }}>
+          🗂️ กรุณาเลือกหรือสร้างประวัติใหม่จากด้านบน
+        </p>
+      )}
+    </main>
   );
 }

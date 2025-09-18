@@ -1,26 +1,126 @@
-@import "tailwindcss";
-
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-color: #f0fdf9;
+  --text-color: #1e293b;
+  --primary-color: #38bdf8;
+  --secondary-color: #34d399;
+  --bot-msg: #e0f2fe;
+  --user-msg: #d1fae5;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ห้าม body เลื่อนทั้งหน้า */
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;   /* ❌ ปิดการ scroll ทั้งหน้า */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  display: flex;
+  flex-direction: column;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* main ครอบทั้งหมด → ให้สูงเต็มจอ */
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+header {
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  padding: 1rem;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: bold;
+}
+
+/* พื้นที่แชท → scroll ได้เฉพาะตรงนี้ */
+.chat-container {
+  flex: 1;                /* กินพื้นที่ที่เหลือเต็ม */
+  display: flex;          /* ใช้ flex วางข้อความเรียงกัน */
+  flex-direction: column; /* เรียงข้อความเป็นแนวตั้ง */
+  padding: 1rem;          /* เว้นขอบด้านใน */
+  overflow-y: auto;       /* เลื่อนแนวตั้งได้ */
+  padding-bottom: 100px;  /* กันไม่ให้ข้อความทับ input-box */
+  margin-bottom: 80px; /* ให้เผื่อพื้นที่เท่ากับความสูง input-box */
+}
+
+
+.message {
+  max-width: 60%;   /* กำหนดความกว้างสูงสุดของข้อความแต่ละอัน */
+  padding: 0rem 0.9rem; /* ช่องว่างข้างในกล่องข้อความ */
+  margin: 0.5rem 0;     /* เว้นระยะห่างกับข้อความบน–ล่าง */
+  border-radius: 12px;  /* ทำให้ขอบโค้ง */
+  line-height: 1.5;     /* ระยะบรรทัด */
+}
+
+.message ul,
+.message ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.message li {
+  margin: 0.3rem 0;
+}
+
+
+
+.bot {
+  background: var(--bot-msg);
+  align-self: flex-start;
+}
+
+.user {
+  background: var(--user-msg);
+  align-self: flex-end;
+}
+
+/* กล่องพิมพ์ข้อความ → ติดล่างเสมอ */
+.input-box {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+
+  display: flex;
+  align-items: center;     
+  padding: 0.5rem 1rem;
+  border-top: 1px solid #e5e7eb;
+  background: white;
+
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* กล่องพิมพ์ */
+input[type="text"] {
+  flex: 1;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #d1d5db;
+  border-radius: 20px;    
+  outline: none;
+
+  font-size: 0.95rem;
+  line-height: 1.4;
+
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+/* ปุ่มส่ง */
+button {
+  margin-left: 0.5rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+button:hover {
+  background-color: var(--secondary-color);
 }
